@@ -1,0 +1,26 @@
+{
+  "name": "terabox-downloader-api",
+  "version": "1.0.0",
+  "description": "TeraBox Downloader API for Vercel Deployment",
+  "main": "api/index.js",
+  "scripts": {
+    "start": "vercel dev",
+    "dev": "vercel dev",
+    "build": "echo 'No build step required'",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "axios": "^1.6.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "terabox",
+    "downloader",
+    "vercel",
+    "api"
+  ],
+  "author": "",
+  "license": "MIT"
+}
