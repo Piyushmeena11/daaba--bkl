@@ -6,8 +6,9 @@
     <title>TeraBox Downloader Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         
         body {
             font-family: 'Inter', sans-serif;
@@ -39,35 +40,15 @@
             box-shadow: 0 10px 40px rgba(59, 130, 246, 0.3);
         }
         
-        .code-editor {
-            font-family: 'JetBrains Mono', monospace;
-            background: #0d1117;
-            color: #c9d1d9;
-        }
-        
-        .code-line-numbers {
-            color: #6e7681;
-            user-select: none;
-        }
-        
-        .syntax-keyword { color: #ff7b72; }
-        .syntax-string { color: #a5d6ff; }
-        .syntax-function { color: #d2a8ff; }
-        .syntax-comment { color: #8b949e; }
-        .syntax-variable { color: #ffa657; }
-        
-        .pulse-glow {
-            animation: pulseGlow 2s ease-in-out infinite;
-        }
-        
-        @keyframes pulseGlow {
-            0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
-            50% { box-shadow: 0 0 40px rgba(139, 92, 246, 0.5); }
+        .gradient-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
         }
         
         .loading-spinner {
             border: 3px solid rgba(255, 255, 255, 0.1);
-            border-top: 3px solid #3b82f6;
+            border-top: 3px solid #fff;
             border-radius: 50%;
             width: 24px;
             height: 24px;
@@ -79,13 +60,25 @@
             100% { transform: rotate(360deg); }
         }
         
-        .tab-active {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2));
-            border-bottom: 2px solid #3b82f6;
+        .pulse-glow {
+            animation: pulseGlow 2s ease-in-out infinite;
         }
         
-        .file-icon {
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(139, 92, 246, 0.5); }
+        }
+        
+        .video-container {
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .video-container video {
+            width: 100%;
+            max-height: 400px;
+            object-fit: contain;
         }
         
         ::-webkit-scrollbar {
@@ -100,10 +93,6 @@
         ::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.2);
             border-radius: 4px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.3);
         }
     </style>
 </head>
@@ -123,195 +112,160 @@
                 <i class="fas fa-cloud-arrow-down text-3xl"></i>
             </div>
             <h1 class="text-4xl md:text-5xl font-bold gradient-text mb-3">TeraBox Downloader Pro</h1>
-            <p class="text-gray-400 text-lg max-w-xl mx-auto">Complete solution with Frontend UI & Backend API for Vercel deployment</p>
+            <p class="text-gray-400 text-lg max-w-xl mx-auto">Download & Stream TeraBox files with ease</p>
         </header>
         
         <!-- Main Container -->
-        <main class="max-w-5xl mx-auto">
+        <main class="max-w-4xl mx-auto">
             
-            <!-- Navigation Tabs -->
-            <div class="glass-card rounded-t-2xl overflow-hidden">
-                <div class="flex">
-                    <button onclick="switchTab('app')" id="tab-app" class="flex-1 py-4 px-6 text-center font-semibold flex items-center justify-center gap-2 tab-active transition-all">
-                        <i class="fas fa-rocket"></i>
-                        <span>Download App</span>
-                    </button>
-                    <button onclick="switchTab('api')" id="tab-api" class="flex-1 py-4 px-6 text-center font-semibold flex items-center justify-center gap-2 text-gray-400 hover:text-white transition-all">
-                        <i class="fas fa-code"></i>
-                        <span>API Code (api/index.js)</span>
-                    </button>
-                    <button onclick="switchTab('package')" id="tab-package" class="flex-1 py-4 px-6 text-center font-semibold flex items-center justify-center gap-2 text-gray-400 hover:text-white transition-all">
-                        <i class="fas fa-box"></i>
-                        <span>package.json</span>
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Tab Content -->
-            <div class="glass-card rounded-b-2xl overflow-hidden">
-                
-                <!-- App Tab -->
-                <div id="view-app" class="p-6 md:p-8">
-                    <div class="max-w-2xl mx-auto space-y-6">
-                        
-                        <!-- URL Input -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2">
-                                <i class="fas fa-link mr-2 text-blue-400"></i>TeraBox Share URL
-                            </label>
-                            <input type="text" id="input-url" 
-                                class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                                placeholder="https://1024terabox.com/s/1hCG9tKsSCJDOXg1Ai9lAKg"
-                                value="https://1024terabox.com/s/1hCG9tKsSCJDOXg1Ai9lAKg">
-                        </div>
-                        
-                        <!-- Cookies Input -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-300 mb-2">
-                                <i class="fas fa-cookie mr-2 text-purple-400"></i>Cookies (JSON Format)
-                                <span class="text-xs text-gray-500 ml-2">• Required for authenticated downloads</span>
-                            </label>
-                            <textarea id="input-cookies" rows="8"
-                                class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all font-mono text-xs leading-relaxed"
-                                placeholder='{"url":"https://www.terabox.com","cookies":[...]}'></textarea>
-                        </div>
-                        
-                        <!-- Generate Button -->
-                        <button onclick="generateLink()" id="btn-generate" class="w-full gradient-btn text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-3 text-lg">
-                            <i class="fas fa-bolt"></i>
-                            <span>Generate Download Link</span>
+            <div class="glass-card rounded-2xl overflow-hidden">
+                <div class="p-6 md:p-8">
+                    
+                    <!-- URL Input -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-300 mb-2">
+                            <i class="fas fa-link mr-2 text-blue-400"></i>TeraBox Share URL
+                        </label>
+                        <input type="text" id="input-url" 
+                            class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                            placeholder="https://terabox.com/s/xxxxx or https://1024terabox.com/s/xxxxx"
+                            value="https://1024terabox.com/s/1hCG9tKsSCJDOXg1Ai9lAKg">
+                    </div>
+                    
+                    <!-- Cookies Input (Collapsible) -->
+                    <div class="mb-6">
+                        <button onclick="toggleCookies()" class="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2 hover:text-white transition-colors">
+                            <i class="fas fa-cookie text-purple-400"></i>
+                            <span>Cookies (JSON Format)</span>
+                            <i class="fas fa-chevron-down text-xs" id="cookie-toggle-icon"></i>
                         </button>
+                        <div id="cookies-container" class="hidden">
+                            <textarea id="input-cookies" rows="6"
+                                class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all font-mono text-xs leading-relaxed"
+                                placeholder='{"cookies":[...]}'></textarea>
+                            <p class="text-xs text-gray-500 mt-1">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Cookies are pre-loaded. Update only if you have fresh cookies.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Generate Button -->
+                    <button onclick="generateLink()" id="btn-generate" class="w-full gradient-btn text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-3 text-lg">
+                        <i class="fas fa-bolt"></i>
+                        <span>Get Download Link</span>
+                    </button>
+                    
+                    <!-- Status Message -->
+                    <div id="status-message" class="hidden mt-4"></div>
+                    
+                    <!-- Result Section -->
+                    <div id="result-section" class="hidden mt-6 space-y-6">
                         
-                        <!-- Status Message -->
-                        <div id="status-message" class="hidden"></div>
-                        
-                        <!-- Result Section -->
-                        <div id="result-section" class="hidden space-y-4 pt-6 border-t border-white/10">
-                            <h3 class="text-xl font-bold flex items-center gap-2">
-                                <i class="fas fa-check-circle text-green-400"></i>
-                                File Ready for Download
-                            </h3>
+                        <!-- File Info Card -->
+                        <div class="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl p-5">
+                            <div class="flex items-center gap-2 mb-4">
+                                <i class="fas fa-check-circle text-green-400 text-xl"></i>
+                                <h3 class="text-lg font-bold text-green-300">File Ready!</h3>
+                            </div>
                             
-                            <div class="bg-white/5 rounded-xl p-5 border border-white/10">
-                                <div class="flex flex-col sm:flex-row items-center gap-4">
-                                    <div class="w-16 h-16 file-icon rounded-xl flex items-center justify-center text-2xl shadow-lg">
-                                        <i class="fas fa-file" id="file-icon"></i>
-                                    </div>
-                                    <div class="flex-1 text-center sm:text-left">
-                                        <p class="font-bold text-lg" id="result-filename">filename.mp4</p>
-                                        <p class="text-gray-400" id="result-size">Size: 0 MB</p>
-                                    </div>
-                                    <a href="#" id="result-download-btn" target="_blank" 
-                                        class="bg-green-500 hover:bg-green-600 text-white font-bold px-6 py-3 rounded-xl flex items-center gap-2 transition-all hover:scale-105">
-                                        <i class="fas fa-download"></i>
-                                        <span>Download</span>
-                                    </a>
+                            <div class="flex flex-col md:flex-row items-start gap-4">
+                                <!-- Thumbnail -->
+                                <div id="thumbnail-container" class="hidden w-32 h-24 rounded-lg overflow-hidden bg-black/30 flex-shrink-0">
+                                    <img id="file-thumbnail" src="" alt="Thumbnail" class="w-full h-full object-cover">
                                 </div>
+                                
+                                <!-- File Details -->
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-bold text-lg text-white truncate" id="result-filename">filename.mp4</p>
+                                    <div class="flex flex-wrap gap-3 mt-2 text-sm text-gray-400">
+                                        <span id="result-size"><i class="fas fa-file mr-1"></i>0 MB</span>
+                                        <span id="result-type"><i class="fas fa-tag mr-1"></i>Video</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Video Player (for video files) -->
+                        <div id="video-player-section" class="hidden">
+                            <h4 class="text-sm font-medium text-gray-300 mb-2">
+                                <i class="fas fa-play-circle mr-2 text-purple-400"></i>Video Preview
+                            </h4>
+                            <div class="video-container">
+                                <video id="video-player" controls playsinline>
+                                    Your browser does not support HTML5 video.
+                                </video>
+                            </div>
+                        </div>
+                        
+                        <!-- Download Links -->
+                        <div class="space-y-4">
+                            <h4 class="text-sm font-medium text-gray-300">
+                                <i class="fas fa-download mr-2 text-blue-400"></i>Download Options
+                            </h4>
+                            
+                            <!-- Primary Download Button -->
+                            <div id="download-primary" class="hidden">
+                                <a href="#" id="btn-download" target="_blank" rel="noopener" 
+                                    class="block w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-4 px-6 rounded-xl text-center transition-all hover:scale-[1.02] shadow-lg">
+                                    <i class="fas fa-download mr-2"></i>
+                                    <span>Download File</span>
+                                </a>
+                            </div>
+                            
+                            <!-- Stream Link (for videos) -->
+                            <div id="stream-primary" class="hidden">
+                                <a href="#" id="btn-stream" target="_blank" rel="noopener"
+                                    class="block w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-bold py-4 px-6 rounded-xl text-center transition-all hover:scale-[1.02] shadow-lg">
+                                    <i class="fas fa-play mr-2"></i>
+                                    <span>Stream Video</span>
+                                </a>
                             </div>
                             
                             <!-- Direct Link -->
                             <div>
-                                <label class="block text-sm font-medium text-gray-400 mb-2">Direct Download Link</label>
+                                <label class="block text-xs font-medium text-gray-500 mb-1">Direct Link (Right-click → Copy)</label>
                                 <div class="flex gap-2">
                                     <input type="text" id="result-link" readonly
-                                        class="flex-1 px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-gray-300 font-mono text-sm">
-                                    <button onclick="copyDirectLink()" class="px-4 py-3 bg-white/10 hover:bg-white/20 rounded-xl transition-all" title="Copy Link">
+                                        class="flex-1 px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-gray-300 font-mono text-xs truncate">
+                                    <button onclick="copyLink()" class="px-4 py-3 bg-white/10 hover:bg-white/20 rounded-xl transition-all flex-shrink-0" title="Copy Link">
                                         <i class="fas fa-copy"></i>
                                     </button>
                                 </div>
                             </div>
                         </div>
                         
-                    </div>
-                </div>
-                
-                <!-- API Code Tab -->
-                <div id="view-api" class="hidden">
-                    <div class="bg-gray-900 border-b border-gray-700 px-4 py-3 flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="flex gap-1.5">
-                                <div class="w-3 h-3 rounded-full bg-red-500"></div>
-                                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
-                                <div class="w-3 h-3 rounded-full bg-green-500"></div>
-                            </div>
-                            <span class="text-gray-400 text-sm font-mono">api/index.js</span>
+                        <!-- Alternative Methods -->
+                        <div class="bg-white/5 rounded-xl p-4 border border-white/10">
+                            <h4 class="text-sm font-semibold text-gray-300 mb-3">
+                                <i class="fas fa-lightbulb mr-2 text-yellow-400"></i>If download doesn't start:
+                            </h4>
+                            <ol class="text-sm text-gray-400 space-y-2">
+                                <li>1. Right-click the download button → "Open in new tab"</li>
+                                <li>2. If prompted to login, use the TeraBox website with your cookies</li>
+                                <li>3. For large files, use a download manager like IDM</li>
+                            </ol>
                         </div>
-                        <button onclick="copyCode('api-code')" class="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-2 px-3 py-1 rounded bg-white/5 hover:bg-white/10 transition-all">
-                            <i class="fas fa-copy"></i>
-                            <span>Copy Code</span>
-                        </button>
+                        
                     </div>
-                    <div class="code-editor p-4 overflow-x-auto max-h-[600px] overflow-y-auto">
-                        <pre id="api-code" class="text-sm leading-relaxed"></pre>
-                    </div>
+                    
                 </div>
-                
-                <!-- Package.json Tab -->
-                <div id="view-package" class="hidden">
-                    <div class="bg-gray-900 border-b border-gray-700 px-4 py-3 flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="flex gap-1.5">
-                                <div class="w-3 h-3 rounded-full bg-red-500"></div>
-                                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
-                                <div class="w-3 h-3 rounded-full bg-green-500"></div>
-                            </div>
-                            <span class="text-gray-400 text-sm font-mono">package.json</span>
-                        </div>
-                        <button onclick="copyCode('package-code')" class="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-2 px-3 py-1 rounded bg-white/5 hover:bg-white/10 transition-all">
-                            <i class="fas fa-copy"></i>
-                            <span>Copy Code</span>
-                        </button>
-                    </div>
-                    <div class="code-editor p-4 overflow-x-auto">
-                        <pre id="package-code" class="text-sm leading-relaxed"></pre>
-                    </div>
-                </div>
-                
             </div>
             
-            <!-- Deployment Guide -->
+            <!-- API Info -->
             <div class="glass-card rounded-2xl mt-6 p-6">
-                <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
-                    <i class="fas fa-rocket text-blue-400"></i>
-                    Deployment Guide for Vercel
+                <h3 class="text-lg font-bold mb-3 flex items-center gap-2">
+                    <i class="fas fa-server text-blue-400"></i>
+                    API Endpoint
                 </h3>
-                <div class="grid md:grid-cols-2 gap-4">
-                    <div class="bg-white/5 rounded-xl p-4 border border-white/10">
-                        <div class="flex items-start gap-3">
-                            <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold">1</div>
-                            <div>
-                                <p class="font-semibold">Create GitHub Repository</p>
-                                <p class="text-gray-400 text-sm">Create a new repo and add <code class="bg-black/30 px-1 rounded">index.html</code> to root</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-white/5 rounded-xl p-4 border border-white/10">
-                        <div class="flex items-start gap-3">
-                            <div class="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold">2</div>
-                            <div>
-                                <p class="font-semibold">Create API Folder</p>
-                                <p class="text-gray-400 text-sm">Create folder <code class="bg-black/30 px-1 rounded">api/</code> with <code class="bg-black/30 px-1 rounded">index.js</code></p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-white/5 rounded-xl p-4 border border-white/10">
-                        <div class="flex items-start gap-3">
-                            <div class="w-8 h-8 rounded-full bg-pink-500/20 flex items-center justify-center text-pink-400 font-bold">3</div>
-                            <div>
-                                <p class="font-semibold">Add package.json</p>
-                                <p class="text-gray-400 text-sm">Copy the package.json code to root folder</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-white/5 rounded-xl p-4 border border-white/10">
-                        <div class="flex items-start gap-3">
-                            <div class="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 font-bold">4</div>
-                            <div>
-                                <p class="font-semibold">Deploy to Vercel</p>
-                                <p class="text-gray-400 text-sm">Import your GitHub repo to Vercel and deploy!</p>
-                            </div>
-                        </div>
-                    </div>
+                <div class="bg-black/30 rounded-lg p-4 font-mono text-sm">
+                    <p class="text-gray-400 mb-2"># POST Request</p>
+                    <p class="text-green-400">POST /api</p>
+                    <p class="text-gray-400 mt-3 mb-2"># Request Body (JSON)</p>
+                    <pre class="text-blue-300 text-xs overflow-x-auto">{
+  "url": "https://terabox.com/s/xxxxx",
+  "cookies": {"cookies": [...]}
+}</pre>
                 </div>
             </div>
             
@@ -324,9 +278,12 @@
         
     </div>
 
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50"></div>
+
     <script>
         // ============================================
-        // DEFAULT COOKIES (Pre-loaded)
+        // DEFAULT COOKIES
         // ============================================
         const DEFAULT_COOKIES = {
             "url": "https://www.terabox.com",
@@ -338,206 +295,43 @@
                 {"domain":".terabox.com","expirationDate":1797421529.069464,"hostOnly":false,"httpOnly":true,"name":"ndus","path":"/","sameSite":"unspecified","secure":true,"session":false,"storeId":"0","value":"YfF8bi3teHui2b2ZR2JFMDNRYtUmfedCtvQe0lve"},
                 {"domain":".terabox.com","expirationDate":1773661536,"hostOnly":false,"httpOnly":false,"name":"_gcl_au","path":"/","sameSite":"unspecified","secure":false,"session":false,"storeId":"0","value":"1.1.1672539397.1765885537"},
                 {"domain":".terabox.com","expirationDate":1773661537,"hostOnly":false,"httpOnly":false,"name":"_rdt_uuid","path":"/","sameSite":"strict","secure":true,"session":false,"storeId":"0","value":"1765885537537.9cea5a38-8e1f-4e3e-9923-60396606e12b"},
-                {"domain":"www.terabox.com","expirationDate":1768477541,"hostOnly":true,"httpOnly":false,"name":"ndut_fmt","path":"/","sameSite":"unspecified","secure":false,"session":false,"storeId":"0","value":"B9BE3C2D316A95FEAD947AF03F7F90BE93453CC8B19A81736D7273AC937A587C"}
+                {"domain":".terabox.com","expirationDate":1773661538,"hostOnly":false,"httpOnly":false,"name":"_rdt_em","path":"/","sameSite":"strict","secure":true,"session":false,"storeId":"0","value":":1a68135193855528b41e250da15e38d7ab1ccb4188c7cf0ca8b54f16d9fd0736,2dfa6e90653bc791092a3aa4a05465bf12322098e77a772e814f77c95357460e"},
+                {"domain":".terabox.com","expirationDate":1800445538.132261,"hostOnly":false,"httpOnly":false,"name":"_ga_HSVH9T016H","path":"/","sameSite":"unspecified","secure":false,"session":false,"storeId":"0","value":"GS2.1.s1765885536$o1$g0$t1765885538$j58$l0$h0"},
+                {"domain":"www.terabox.com","expirationDate":1781437539,"hostOnly":true,"httpOnly":false,"name":"g_state","path":"/","sameSite":"unspecified","secure":false,"session":false,"storeId":"0","value":"{\"i_l\":0,\"i_ll\":1765885539619,\"i_b\":\"YG4tydtRv2iRqx/utXgIqEXT2UKLcNTAu9F9F7m23rg\",\"i_e\":{\"enable_itp_optimization\":0}}"},
+                {"domain":"www.terabox.com","expirationDate":1768477541,"hostOnly":true,"httpOnly":false,"name":"ndut_fmt","path":"/","sameSite":"unspecified","secure":false,"session":false,"storeId":"0","value":"B9BE3C2D316A95FEAD947AF03F7F90BE93453CC8B19A81736D7273AC937A587C"},
+                {"domain":"www.terabox.com","expirationDate":1768477542.523677,"hostOnly":true,"httpOnly":false,"name":"ndut_fmv","path":"/","sameSite":"unspecified","secure":false,"session":false,"storeId":"0","value":"259ec0b6993b5a5e98a78c0444581e5471ff93decf3f7566dbc1d0b0bfcdb65acccb85fcae680b420f8c5c29bdc9bc187434e5b0cb8e540b274667559decbdfe218eeadb9520518fb7add6714cf81fa294a59e55f58624fd4eb3dee42797fe7e6f432e49146edfa1ccb87cfe481027d9"},
+                {"domain":".terabox.com","expirationDate":1765892745.020693,"hostOnly":false,"httpOnly":true,"name":"ab_sr","path":"/","sameSite":"no_restriction","secure":true,"session":false,"storeId":"0","value":"1.0.1_ODQwNDlkNzg3M2RkY2U5MjQyZGFhZTNiZjkwZjk5MjhmOWJjYzdlNzY3NDU5YTc0M2EyZGFhODlmMmM2NzBhMmRjMTM0ZmQwYzk3ZWE0OGI1MzFiOGYyMjdmMjlmZWYwNDhjNjhlMmIxZGVlMmE5YTI3MjFiNmRkZDkzMGZkYjQxZDUzYzg1NGFiZWE0ZWI2M2Y5ZjA0Y2M4NTcxYjgxZQ=="},
+                {"domain":".terabox.com","hostOnly":false,"httpOnly":false,"name":"ab_ymg_result","path":"/","sameSite":"unspecified","secure":false,"session":true,"storeId":"0","value":"{\"data\":\"e03381a764728b08335cce57bf5b87b712da60cc09d95c96b96f40a5881513ba6f1b036dc0de9fb68713434419729b4e89508517a1b832f4ca94648767c98c61fad9a3fe4940fb553f0b0d4439c8f993672a1984b8ac190e8f0970f5c1d987d7688474c13b2a61f88445b73a55292232a9fb38456233b2340dce0671ff427ede\",\"key_id\":\"66\",\"sign\":\"27d27084\"}"},
+                {"domain":".terabox.com","expirationDate":1800445574.598458,"hostOnly":false,"httpOnly":false,"name":"_ga_06ZNKL8C2E","path":"/","sameSite":"unspecified","secure":false,"session":false,"storeId":"0","value":"GS2.1.s1765885512$o1$g1$t1765885574$j60$l0$h0"}
             ]
         };
 
         // ============================================
-        // BACKEND API CODE (for api/index.js)
+        // GLOBALS
         // ============================================
-        const API_CODE = `const axios = require('axios');
-
-module.exports = async (req, res) => {
-    // CORS Headers
-    res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
-
-    if (req.method !== 'POST') {
-        return res.status(405).json({ success: false, error: 'Method not allowed' });
-    }
-
-    const { url, cookies } = req.body;
-
-    if (!url) {
-        return res.status(400).json({ success: false, error: 'URL is required' });
-    }
-
-    try {
-        // Extract short URL code
-        let shortCode = url;
-        if (url.includes('/s/')) {
-            shortCode = url.split('/s/')[1].split('?')[0].split('/')[0];
-        }
-
-        if (!shortCode) {
-            return res.status(400).json({ success: false, error: 'Invalid TeraBox URL format' });
-        }
-
-        // Parse cookies
-        let cookieString = '';
-        let parsedCookies = cookies;
-        
-        if (typeof cookies === 'string') {
-            try {
-                parsedCookies = JSON.parse(cookies);
-            } catch (e) {
-                cookieString = cookies;
-            }
-        }
-
-        if (parsedCookies && typeof parsedCookies === 'object') {
-            const cookieArray = parsedCookies.cookies || parsedCookies;
-            if (Array.isArray(cookieArray)) {
-                cookieString = cookieArray.map(c => \`\${c.name}=\${c.value}\`).join('; ');
-            }
-        }
-
-        // Request headers
-        const headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'application/json, text/plain, */*',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Referer': 'https://www.terabox.com/',
-            'Origin': 'https://www.terabox.com'
-        };
-
-        if (cookieString) {
-            headers['Cookie'] = cookieString;
-        }
-
-        // Fetch file info from TeraBox API
-        const apiUrl = \`https://www.terabox.com/api/shorturlinfo?shorturl=\${shortCode}&root=1\`;
-        
-        const response = await axios.get(apiUrl, { 
-            headers,
-            timeout: 30000
-        });
-
-        const data = response.data;
-
-        if (data.errno !== 0) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'TeraBox API error',
-                errno: data.errno,
-                errmsg: data.errmsg || 'Unknown error'
-            });
-        }
-
-        if (!data.list || data.list.length === 0) {
-            return res.status(404).json({ success: false, error: 'No files found' });
-        }
-
-        const file = data.list[0];
-        
-        // Get download link
-        let downloadLink = file.dlink || null;
-        
-        // If no direct link, try to construct one
-        if (!downloadLink && file.fs_id) {
-            const uk = data.uk;
-            const shareid = data.shareid;
-            const sign = data.sign;
-            const timestamp = data.timestamp;
-            
-            if (uk && shareid) {
-                downloadLink = \`https://www.terabox.com/share/download?shareid=\${shareid}&uk=\${uk}&fid_list=[\${file.fs_id}]&sign=\${sign}&timestamp=\${timestamp}\`;
-            }
-        }
-
-        return res.status(200).json({
-            success: true,
-            data: {
-                filename: file.server_filename,
-                size: file.size,
-                sizeFormatted: formatSize(file.size),
-                category: file.category,
-                fsId: file.fs_id,
-                md5: file.md5,
-                downloadLink: downloadLink,
-                thumbs: file.thumbs,
-                isDir: file.isdir === 1
-            }
-        });
-
-    } catch (error) {
-        console.error('Error:', error.message);
-        return res.status(500).json({ 
-            success: false, 
-            error: 'Failed to process request',
-            message: error.message 
-        });
-    }
-};
-
-function formatSize(bytes) {
-    if (!bytes || bytes === 0) return '0 B';
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return (bytes / Math.pow(1024, i)).toFixed(2) + ' ' + sizes[i];
-}`;
-
-        // ============================================
-        // PACKAGE.JSON CODE
-        // ============================================
-        const PACKAGE_CODE = `{
-  "name": "terabox-downloader-api",
-  "version": "1.0.0",
-  "description": "TeraBox Downloader API for Vercel",
-  "main": "api/index.js",
-  "scripts": {
-    "start": "vercel dev"
-  },
-  "dependencies": {
-    "axios": "^1.6.2"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  }
-}`;
+        let currentData = null;
+        let hlsPlayer = null;
 
         // ============================================
         // INITIALIZATION
         // ============================================
         document.addEventListener('DOMContentLoaded', () => {
-            // Set default cookies
             document.getElementById('input-cookies').value = JSON.stringify(DEFAULT_COOKIES, null, 2);
-            
-            // Set code displays with syntax highlighting
-            document.getElementById('api-code').innerHTML = highlightJS(API_CODE);
-            document.getElementById('package-code').innerHTML = highlightJSON(PACKAGE_CODE);
         });
 
         // ============================================
-        // TAB SWITCHING
+        // TOGGLE COOKIES
         // ============================================
-        function switchTab(tab) {
-            // Hide all views
-            document.querySelectorAll('[id^="view-"]').forEach(el => el.classList.add('hidden'));
-            
-            // Remove active class from all tabs
-            document.querySelectorAll('[id^="tab-"]').forEach(el => {
-                el.classList.remove('tab-active');
-                el.classList.add('text-gray-400');
-            });
-            
-            // Show selected view
-            document.getElementById(`view-${tab}`).classList.remove('hidden');
-            
-            // Add active class to selected tab
-            const activeTab = document.getElementById(`tab-${tab}`);
-            activeTab.classList.add('tab-active');
-            activeTab.classList.remove('text-gray-400');
+        function toggleCookies() {
+            const container = document.getElementById('cookies-container');
+            const icon = document.getElementById('cookie-toggle-icon');
+            container.classList.toggle('hidden');
+            icon.classList.toggle('fa-chevron-down');
+            icon.classList.toggle('fa-chevron-up');
         }
 
         // ============================================
-        // GENERATE DOWNLOAD LINK
+        // GENERATE LINK
         // ============================================
         async function generateLink() {
             const url = document.getElementById('input-url').value.trim();
@@ -551,11 +345,12 @@ function formatSize(bytes) {
                 return;
             }
             
-            // Show loading state
+            // Reset UI
             btn.disabled = true;
             btn.innerHTML = '<div class="loading-spinner"></div><span>Processing...</span>';
             resultSection.classList.add('hidden');
             statusDiv.classList.add('hidden');
+            resetVideoPlayer();
             
             try {
                 const response = await fetch('/api', {
@@ -567,25 +362,18 @@ function formatSize(bytes) {
                 const data = await response.json();
                 
                 if (data.success) {
+                    currentData = data.data;
                     showResult(data.data);
+                    showStatus('success', 'File information retrieved successfully!');
                 } else {
                     showStatus('error', data.error || 'Failed to get download link');
                 }
             } catch (error) {
-                // API not available - show demo mode
-                showStatus('warning', 'Backend API not detected. Deploy to Vercel for full functionality. Showing demo result...');
-                
-                setTimeout(() => {
-                    showResult({
-                        filename: 'Demo_Video_File.mp4',
-                        sizeFormatted: '1.25 GB',
-                        category: 1,
-                        downloadLink: 'https://terabox.com/demo-download-link'
-                    });
-                }, 1500);
+                console.error('Error:', error);
+                showStatus('error', 'API connection failed. Make sure the backend is deployed to Vercel.');
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-bolt"></i><span>Generate Download Link</span>';
+                btn.innerHTML = '<i class="fas fa-bolt"></i><span>Get Download Link</span>';
             }
         }
 
@@ -595,28 +383,110 @@ function formatSize(bytes) {
         function showResult(data) {
             const resultSection = document.getElementById('result-section');
             
+            // File info
             document.getElementById('result-filename').textContent = data.filename || 'Unknown File';
-            document.getElementById('result-size').textContent = `Size: ${data.sizeFormatted || formatBytes(data.size)}`;
-            document.getElementById('result-link').value = data.downloadLink || 'N/A';
-            document.getElementById('result-download-btn').href = data.downloadLink || '#';
+            document.getElementById('result-size').innerHTML = `<i class="fas fa-file mr-1"></i>${data.sizeFormatted || formatBytes(data.size)}`;
             
-            // Set file icon based on category
-            const iconEl = document.getElementById('file-icon');
-            const icons = {
-                1: 'fa-video',
-                2: 'fa-music',
-                3: 'fa-image',
-                4: 'fa-file-alt',
-                5: 'fa-file-archive',
-                6: 'fa-file-code'
-            };
-            iconEl.className = `fas ${icons[data.category] || 'fa-file'}`;
+            // File type
+            const typeLabels = {1: 'Video', 2: 'Audio', 3: 'Image', 4: 'Document', 5: 'Archive', 6: 'Other'};
+            document.getElementById('result-type').innerHTML = `<i class="fas fa-tag mr-1"></i>${typeLabels[data.category] || 'File'}`;
+            
+            // Thumbnail
+            if (data.thumbnail) {
+                document.getElementById('file-thumbnail').src = data.thumbnail;
+                document.getElementById('thumbnail-container').classList.remove('hidden');
+            } else {
+                document.getElementById('thumbnail-container').classList.add('hidden');
+            }
+            
+            // Download link
+            const downloadLink = data.downloadLink || '';
+            document.getElementById('result-link').value = downloadLink;
+            
+            if (downloadLink && downloadLink !== 'N/A') {
+                document.getElementById('btn-download').href = downloadLink;
+                document.getElementById('download-primary').classList.remove('hidden');
+            } else {
+                document.getElementById('download-primary').classList.add('hidden');
+            }
+            
+            // Stream link (for videos)
+            if (data.isVideo && data.streamLink) {
+                document.getElementById('btn-stream').href = data.streamLink;
+                document.getElementById('stream-primary').classList.remove('hidden');
+                
+                // Setup video player
+                setupVideoPlayer(data.streamLink, data.downloadLink);
+            } else if (data.isVideo && data.downloadLink) {
+                // Use download link for video
+                document.getElementById('stream-primary').classList.add('hidden');
+                setupVideoPlayer(null, data.downloadLink);
+            } else {
+                document.getElementById('stream-primary').classList.add('hidden');
+                document.getElementById('video-player-section').classList.add('hidden');
+            }
             
             resultSection.classList.remove('hidden');
         }
 
         // ============================================
-        // SHOW STATUS MESSAGE
+        // VIDEO PLAYER
+        // ============================================
+        function setupVideoPlayer(streamUrl, downloadUrl) {
+            const videoSection = document.getElementById('video-player-section');
+            const video = document.getElementById('video-player');
+            
+            // Reset
+            resetVideoPlayer();
+            
+            const playUrl = streamUrl || downloadUrl;
+            
+            if (!playUrl) {
+                videoSection.classList.add('hidden');
+                return;
+            }
+            
+            videoSection.classList.remove('hidden');
+            
+            // Check if HLS stream
+            if (playUrl.includes('.m3u8') || playUrl.includes('M3U8')) {
+                if (Hls.isSupported()) {
+                    hlsPlayer = new Hls();
+                    hlsPlayer.loadSource(playUrl);
+                    hlsPlayer.attachMedia(video);
+                    hlsPlayer.on(Hls.Events.ERROR, function(event, data) {
+                        console.error('HLS Error:', data);
+                        // Fallback to download URL
+                        if (downloadUrl && downloadUrl !== playUrl) {
+                            video.src = downloadUrl;
+                        }
+                    });
+                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = playUrl;
+                }
+            } else {
+                // Direct video URL
+                video.src = playUrl;
+            }
+            
+            // Add poster if thumbnail available
+            if (currentData && currentData.thumbnail) {
+                video.poster = currentData.thumbnail;
+            }
+        }
+
+        function resetVideoPlayer() {
+            const video = document.getElementById('video-player');
+            if (hlsPlayer) {
+                hlsPlayer.destroy();
+                hlsPlayer = null;
+            }
+            video.src = '';
+            video.poster = '';
+        }
+
+        // ============================================
+        // STATUS MESSAGES
         // ============================================
         function showStatus(type, message) {
             const statusDiv = document.getElementById('status-message');
@@ -637,55 +507,49 @@ function formatSize(bytes) {
                 <span>${message}</span>
             `;
             statusDiv.classList.remove('hidden');
-        }
-
-        // ============================================
-        // COPY FUNCTIONS
-        // ============================================
-        function copyCode(elementId) {
-            const codeEl = document.getElementById(elementId);
-            const text = codeEl.textContent;
             
-            navigator.clipboard.writeText(text).then(() => {
-                showToast('Code copied to clipboard!');
-            });
+            // Auto-hide success after 3s
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.classList.add('hidden');
+                }, 3000);
+            }
         }
 
-        function copyDirectLink() {
+        // ============================================
+        // COPY LINK
+        // ============================================
+        function copyLink() {
             const link = document.getElementById('result-link').value;
-            navigator.clipboard.writeText(link).then(() => {
-                showToast('Link copied to clipboard!');
-            });
+            if (link && link !== 'N/A') {
+                navigator.clipboard.writeText(link).then(() => {
+                    showToast('Link copied to clipboard!');
+                });
+            } else {
+                showToast('No link available to copy', 'error');
+            }
         }
 
-        function showToast(message) {
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-            toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg z-50 animate-pulse';
-            toast.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${message}`;
-            document.body.appendChild(toast);
+            const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+            toast.className = `${bgColor} text-white px-6 py-3 rounded-xl shadow-lg mb-2 transform transition-all duration-300 translate-x-full`;
+            toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2"></i>${message}`;
+            container.appendChild(toast);
             
-            setTimeout(() => toast.remove(), 2000);
+            // Animate in
+            setTimeout(() => toast.classList.remove('translate-x-full'), 10);
+            
+            // Remove after 2s
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => toast.remove(), 300);
+            }, 2000);
         }
 
         // ============================================
-        // SYNTAX HIGHLIGHTING
-        // ============================================
-        function highlightJS(code) {
-            return code
-                .replace(/\/\/.*$/gm, '<span class="syntax-comment">$&</span>')
-                .replace(/('.*?'|".*?"|`.*?`)/g, '<span class="syntax-string">$1</span>')
-                .replace(/\b(const|let|var|function|async|await|return|if|else|try|catch|throw|new|module|exports|require)\b/g, '<span class="syntax-keyword">$1</span>')
-                .replace(/\b(\d+)\b/g, '<span class="syntax-variable">$1</span>');
-        }
-
-        function highlightJSON(code) {
-            return code
-                .replace(/(".*?")\s*:/g, '<span class="syntax-keyword">$1</span>:')
-                .replace(/:\s*(".*?")/g, ': <span class="syntax-string">$1</span>');
-        }
-
-        // ============================================
-        // UTILITY FUNCTIONS
+        // UTILITIES
         // ============================================
         function formatBytes(bytes) {
             if (!bytes || bytes === 0) return '0 B';
