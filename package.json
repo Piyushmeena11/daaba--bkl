@@ -1,12 +1,8 @@
 {
-  "name": "terabox-downloader-player",
-  "version": "3.0.0",
-  "description": "TeraBox Downloader with Online Video Player",
+  "name": "terabox-api",
+  "version": "1.0.0",
+  "description": "TeraBox Download API",
   "main": "api/index.js",
-  "scripts": {
-    "dev": "vercel dev",
-    "start": "vercel dev"
-  },
   "dependencies": {
     "axios": "^1.7.0"
   },
