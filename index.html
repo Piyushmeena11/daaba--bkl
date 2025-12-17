@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeraBox Downloader & Player</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.7/dist/hls.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        * { font-family: 'Inter', sans-serif; }
+        
+        body {
+            background: linear-gradient(135deg, #0c0f1a 0%, #1a1f35 50%, #0c0f1a 100%);
+            min-height: 100vh;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        .glow-blue { box-shadow: 0 0 30px rgba(59, 130, 246, 0.3); }
+        .glow-green { box-shadow: 0 0 30px rgba(34, 197, 94, 0.3); }
+        .glow-purple { box-shadow: 0 0 30px rgba(168, 85, 247, 0.3); }
+        
+        .gradient-btn {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            transition: all 0.3s ease;
+        }
+        .gradient-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
+        }
+        .gradient-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: #fff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Video Player Styles */
+        .video-wrapper {
+            position: relative;
+            background: #000;
+            border-radius: 16px;
+            overflow: hidden;
+            aspect-ratio: 16/9;
+        }
+        
+        .video-wrapper video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        .video-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.6);
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+        
+        .video-overlay:hover {
+            background: rgba(0,0,0,0.5);
+        }
+        
+        .play-btn-large {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+        
+        .play-btn-large:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.1);
+        }
+        
+        .quality-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(0,0,0,0.7);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+    </style>
+</head>
+<body class="text-white">
+    
+    <!-- Background -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute top-20 left-20 w-72 h-72 bg-blue-600/10 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-20 right-20 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-600/5 rounded-full blur-3xl"></div>
+    </div>
+    
+    <div class="relative z-10 min-h-screen py-8 px-4">
+        
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 mb-4 shadow-lg glow-blue">
+                <i class="fas fa-cloud-arrow-down text-2xl"></i>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
+                TeraBox Downloader & Player
+            </h1>
+            <p class="text-gray-400 max-w-lg mx-auto">Stream & Download TeraBox videos directly in your browser</p>
+        </header>
+        
+        <!-- Main App -->
+        <main class="max-w-5xl mx-auto space-y-6">
+            
+            <!-- Input Section -->
+            <section class="glass rounded-2xl p-6">
+                <div class="space-y-4">
+                    
+                    <!-- URL Input -->
+                    <div>
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+                            <i class="fas fa-link text-blue-400"></i>
+                            TeraBox Share URL
+                        </label>
+                        <input type="text" id="input-url"
+                            class="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm"
+                            placeholder="https://terabox.com/s/xxxxx or https://1024terabox.com/s/xxxxx"
+                            value="https://1024terabox.com/s/1hCG9tKsSCJDOXg1Ai9lAKg">
+                    </div>
+                    
+                    <!-- Cookies Toggle -->
+                    <div>
+                        <button onclick="toggleCookies()" class="flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-white transition-colors">
+                            <i class="fas fa-cookie-bite text-amber-400"></i>
+                            <span>Cookies (Optional - Click to expand)</span>
+                            <i class="fas fa-chevron-down text-xs transition-transform" id="cookie-icon"></i>
+                        </button>
+                        <div id="cookie-section" class="hidden mt-3">
+                            <textarea id="input-cookies" rows="5"
+                                class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all font-mono text-xs"
+                                placeholder='{"cookies":[...]}'></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <button onclick="fetchFileInfo()" id="btn-fetch" class="w-full gradient-btn text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-3">
+                        <i class="fas fa-bolt"></i>
+                        <span>Get Video & Download Link</span>
+                    </button>
+                    
+                </div>
+            </section>
+            
+            <!-- Status -->
+            <div id="status-box" class="hidden"></div>
+            
+            <!-- Result Section -->
+            <section id="result-section" class="hidden space-y-6">
+                
+                <!-- File Info -->
+                <div class="glass rounded-2xl p-5 glow-green">
+                    <div class="flex items-start gap-4">
+                        <div id="thumb-box" class="hidden w-20 h-14 rounded-lg overflow-hidden bg-black/50 flex-shrink-0">
+                            <img id="file-thumb" src="" alt="" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <i class="fas fa-check-circle text-green-400"></i>
+                                <span class="text-green-400 font-semibold text-sm">Ready!</span>
+                            </div>
+                            <h3 class="font-bold text-lg truncate" id="file-name">filename.mp4</h3>
+                            <div class="flex flex-wrap gap-3 mt-1 text-sm text-gray-400">
+                                <span id="file-size"><i class="fas fa-hard-drive mr-1"></i>0 MB</span>
+                                <span id="file-type"><i class="fas fa-film mr-1"></i>Video</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Video Player -->
+                <div id="player-section" class="hidden">
+                    <div class="glass rounded-2xl overflow-hidden glow-purple">
+                        <div class="p-4 border-b border-white/10">
+                            <div class="flex items-center justify-between">
+                                <h4 class="font-semibold flex items-center gap-2">
+                                    <i class="fas fa-play-circle text-purple-400"></i>
+                                    Online Player
+                                </h4>
+                                <div id="quality-selector" class="flex gap-2"></div>
+                            </div>
+                        </div>
+                        <div class="video-wrapper" id="video-container">
+                            <video id="video-player" controls playsinline preload="metadata">
+                                Your browser does not support video playback.
+                            </video>
+                            <div class="video-overlay" id="video-overlay" onclick="playVideo()">
+                                <div class="play-btn-large">
+                                    <i class="fas fa-play text-3xl text-white ml-1"></i>
+                                </div>
+                            </div>
+                            <div class="quality-badge text-green-400" id="current-quality">HD</div>
+                        </div>
+                        <div class="p-4 bg-black/30">
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="toggleFullscreen()" class="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors">
+                                    <i class="fas fa-expand mr-2"></i>Fullscreen
+                                </button>
+                                <button onclick="togglePiP()" class="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors">
+                                    <i class="fas fa-clone mr-2"></i>Picture-in-Picture
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Download Options -->
+                <div class="glass rounded-2xl p-5">
+                    <h4 class="font-semibold mb-4 flex items-center gap-2">
+                        <i class="fas fa-download text-blue-400"></i>
+                        Download Options
+                    </h4>
+                    
+                    <div class="space-y-3">
+                        <!-- Primary Download -->
+                        <div id="download-box" class="hidden">
+                            <a href="#" id="btn-download" target="_blank" rel="noopener" 
+                                class="block w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold py-3.5 px-6 rounded-xl text-center transition-all hover:scale-[1.01] shadow-lg">
+                                <i class="fas fa-download mr-2"></i>
+                                <span>Download Original File</span>
+                            </a>
+                        </div>
+                        
+                        <!-- Stream Downloads -->
+                        <div id="stream-downloads" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+                        
+                        <!-- Direct Link -->
+                        <div class="mt-4">
+                            <label class="text-xs text-gray-500 mb-1 block">Direct Link (Copy)</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="direct-link" readonly
+                                    class="flex-1 px-3 py-2.5 bg-black/30 border border-white/10 rounded-lg text-gray-400 font-mono text-xs truncate">
+                                <button onclick="copyLink()" class="px-4 py-2.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors" title="Copy">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Help Box -->
+                <div class="glass rounded-xl p-4 text-sm">
+                    <h5 class="font-semibold mb-2 flex items-center gap-2 text-yellow-400">
+                        <i class="fas fa-lightbulb"></i>
+                        Tips
+                    </h5>
+                    <ul class="text-gray-400 space-y-1">
+                        <li>• If video doesn't play, try different quality options</li>
+                        <li>• For download, right-click → "Save link as..." if direct click doesn't work</li>
+                        <li>• Some videos may require fresh cookies - update them if needed</li>
+                        <li>• Use IDM or similar download manager for large files</li>
+                    </ul>
+                </div>
+                
+            </section>
+            
+        </main>
+        
+        <!-- Footer -->
+        <footer class="text-center mt-12 text-gray-500 text-sm">
+            <p>TeraBox Downloader & Player • For Educational Purposes</p>
+        </footer>
+        
+    </div>
+    
+    <!-- Toast -->
+    <div id="toast-box" class="fixed bottom-6 right-6 z-50"></div>
+
+    <script>
+        // ============================
+        // DEFAULT COOKIES
+        // ============================
+        const DEFAULT_COOKIES = {"url":"https://www.terabox.com","cookies":[{"domain":"www.terabox.com","hostOnly":true,"httpOnly":false,"name":"csrfToken","path":"/","sameSite":"unspecified","secure":false,"session":true,"storeId":"0","value":"gt8gMxIBAjXaGnqpKp7kTvmd"},{"domain":".terabox.com","expirationDate":1771069507.814615,"hostOnly":false,"httpOnly":false,"name":"browserid","path":"/","sameSite":"unspecified","secure":false,"session":false,"storeId":"0","value":"6QhVuJprM2elRR2S44hdSHbQ0UTbFMdP3yQQ23fJkuFSoktSxxMIlbMgev0="},{"domain":".terabox.com","expirationDate":1768477538.120609,"hostOnly":false,"httpOnly":false,"name":"lang","path":"/","sameSite":"unspecified","secure":false,"session":false,"storeId":"0","value":"en"},{"domain":".terabox.com","expirationDate":1800445544.448699,"hostOnly":false,"httpOnly":false,"name":"_ga","path":"/","sameSite":"unspecified","secure":false,"session":false,"storeId":"0","value":"GA1.1.412164912.1765885513"},{"domain":".terabox.com","expirationDate":1797421529.069464,"hostOnly":false,"httpOnly":true,"name":"ndus","path":"/","sameSite":"unspecified","secure":true,"session":false,"storeId":"0","value":"YfF8bi3teHui2b2ZR2JFMDNRYtUmfedCtvQe0lve"},{"domain":".terabox.com","expirationDate":1773661536,"hostOnly":false,"httpOnly":false,"name":"_gcl_au","path":"/","sameSite":"unspecified","secure":false,"session":false,"storeId":"0","value":"1.1.1672539397.1765885537"},{"domain":".terabox.com","expirationDate":1773661537,"hostOnly":false,"httpOnly":false,"name":"_rdt_uuid","path":"/","sameSite":"strict","secure":true,"session":false,"storeId":"0","value":"1765885537537.9cea5a38-8e1f-4e3e-9923-60396606e12b"},{"domain":".terabox.com","expirationDate":1773661538,"hostOnly":false,"httpOnly":false,"name":"_rdt_em","path":"/","sameSite":"strict","secure":true,"session":false,"storeId":"0","value":":1a68135193855528b41e250da15e38d7ab1ccb4188c7cf0ca8b54f16d9fd0736,2dfa6e90653bc791092a3aa4a05465bf12322098e77a772e814f77c95357460e"},{"domain":".terabox.com","expirationDate":1800445538.132261,"hostOnly":false,"httpOnly":false,"name":"_ga_HSVH9T016H","path":"/","sameSite":"unspecified","secure":false,"session":false,"storeId":"0","value":"GS2.1.s1765885536$o1$g0$t1765885538$j58$l0$h0"},{"domain":"www.terabox.com","expirationDate":1781437539,"hostOnly":true,"httpOnly":false,"name":"g_state","path":"/","sameSite":"unspecified","secure":false,"session":false,"storeId":"0","value":"{\"i_l\":0,\"i_ll\":1765885539619,\"i_b\":\"YG4tydtRv2iRqx/utXgIqEXT2UKLcNTAu9F9F7m23rg\",\"i_e\":{\"enable_itp_optimization\":0}}"},{"domain":"www.terabox.com","expirationDate":1768477541,"hostOnly":true,"httpOnly":false,"name":"ndut_fmt","path":"/","sameSite":"unspecified","secure":false,"session":false,"storeId":"0","value":"B9BE3C2D316A95FEAD947AF03F7F90BE93453CC8B19A81736D7273AC937A587C"},{"domain":"www.terabox.com","expirationDate":1768477542.523677,"hostOnly":true,"httpOnly":false,"name":"ndut_fmv","path":"/","sameSite":"unspecified","secure":false,"session":false,"storeId":"0","value":"259ec0b6993b5a5e98a78c0444581e5471ff93decf3f7566dbc1d0b0bfcdb65acccb85fcae680b420f8c5c29bdc9bc187434e5b0cb8e540b274667559decbdfe218eeadb9520518fb7add6714cf81fa294a59e55f58624fd4eb3dee42797fe7e6f432e49146edfa1ccb87cfe481027d9"},{"domain":".terabox.com","expirationDate":1765892745.020693,"hostOnly":false,"httpOnly":true,"name":"ab_sr","path":"/","sameSite":"no_restriction","secure":true,"session":false,"storeId":"0","value":"1.0.1_ODQwNDlkNzg3M2RkY2U5MjQyZGFhZTNiZjkwZjk5MjhmOWJjYzdlNzY3NDU5YTc0M2EyZGFhODlmMmM2NzBhMmRjMTM0ZmQwYzk3ZWE0OGI1MzFiOGYyMjdmMjlmZWYwNDhjNjhlMmIxZGVlMmE5YTI3MjFiNmRkZDkzMGZkYjQxZDUzYzg1NGFiZWE0ZWI2M2Y5ZjA0Y2M4NTcxYjgxZQ=="},{"domain":".terabox.com","hostOnly":false,"httpOnly":false,"name":"ab_ymg_result","path":"/","sameSite":"unspecified","secure":false,"session":true,"storeId":"0","value":"{\"data\":\"e03381a764728b08335cce57bf5b87b712da60cc09d95c96b96f40a5881513ba6f1b036dc0de9fb68713434419729b4e89508517a1b832f4ca94648767c98c61fad9a3fe4940fb553f0b0d4439c8f993672a1984b8ac190e8f0970f5c1d987d7688474c13b2a61f88445b73a55292232a9fb38456233b2340dce0671ff427ede\",\"key_id\":\"66\",\"sign\":\"27d27084\"}"},{"domain":".terabox.com","expirationDate":1800445574.598458,"hostOnly":false,"httpOnly":false,"name":"_ga_06ZNKL8C2E","path":"/","sameSite":"unspecified","secure":false,"session":false,"storeId":"0","value":"GS2.1.s1765885512$o1$g1$t1765885574$j60$l0$h0"}]};
+
+        // ============================
+        // GLOBALS
+        // ============================
+        let currentData = null;
+        let hlsInstance = null;
+        let currentQuality = 'auto';
+
+        // ============================
+        // INIT
+        // ============================
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('input-cookies').value = JSON.stringify(DEFAULT_COOKIES, null, 2);
+        });
+
+        // ============================
+        // TOGGLE COOKIES
+        // ============================
+        function toggleCookies() {
+            const section = document.getElementById('cookie-section');
+            const icon = document.getElementById('cookie-icon');
+            section.classList.toggle('hidden');
+            icon.classList.toggle('rotate-180');
+        }
+
+        // ============================
+        // FETCH FILE INFO
+        // ============================
+        async function fetchFileInfo() {
+            const url = document.getElementById('input-url').value.trim();
+            const cookies = document.getElementById('input-cookies').value.trim();
+            const btn = document.getElementById('btn-fetch');
+            
+            if (!url) {
+                showStatus('error', 'Please enter a TeraBox URL');
+                return;
+            }
+            
+            // Reset
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div><span>Fetching...</span>';
+            document.getElementById('result-section').classList.add('hidden');
+            document.getElementById('status-box').classList.add('hidden');
+            destroyPlayer();
+            
+            try {
+                const res = await fetch('/api', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, cookies })
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    currentData = data.data;
+                    displayResult(data.data);
+                } else {
+                    showStatus('error', data.error || 'Failed to fetch file info');
+                }
+            } catch (err) {
+                console.error(err);
+                showStatus('error', 'Connection failed. Make sure backend is deployed.');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-bolt"></i><span>Get Video & Download Link</span>';
+            }
+        }
+
+        // ============================
+        // DISPLAY RESULT
+        // ============================
+        function displayResult(data) {
+            // File info
+            document.getElementById('file-name').textContent = data.filename || 'Unknown';
+            document.getElementById('file-size').innerHTML = `<i class="fas fa-hard-drive mr-1"></i>${data.sizeFormatted}`;
+            
+            const typeLabels = { 1: 'Video', 2: 'Audio', 3: 'Image', 4: 'Document', 5: 'Archive', 6: 'Other' };
+            document.getElementById('file-type').innerHTML = `<i class="fas fa-${data.isVideo ? 'film' : 'file'} mr-1"></i>${typeLabels[data.category] || 'File'}`;
+            
+            // Thumbnail
+            if (data.thumbnail) {
+                document.getElementById('file-thumb').src = data.thumbnail;
+                document.getElementById('thumb-box').classList.remove('hidden');
+            } else {
+                document.getElementById('thumb-box').classList.add('hidden');
+            }
+            
+            // Video Player
+            if (data.isVideo) {
+                document.getElementById('player-section').classList.remove('hidden');
+                setupPlayer(data);
+            } else {
+                document.getElementById('player-section').classList.add('hidden');
+            }
+            
+            // Download button
+            const mainLink = data.downloadLink || data.rawDlink;
+            if (mainLink) {
+                document.getElementById('btn-download').href = mainLink;
+                document.getElementById('download-box').classList.remove('hidden');
+                document.getElementById('direct-link').value = mainLink;
+            } else {
+                document.getElementById('download-box').classList.add('hidden');
+                document.getElementById('direct-link').value = data.streamLink || 'N/A';
+            }
+            
+            // Stream download options
+            const streamBox = document.getElementById('stream-downloads');
+            streamBox.innerHTML = '';
+            
+            if (data.resolutions && data.resolutions.length > 0) {
+                data.resolutions.forEach(r => {
+                    const btn = document.createElement('a');
+                    btn.href = r.url;
+                    btn.target = '_blank';
+                    btn.rel = 'noopener';
+                    btn.className = 'flex items-center justify-center gap-2 bg-purple-600/20 hover:bg-purple-600/40 border border-purple-500/30 text-purple-300 font-medium py-2.5 px-4 rounded-lg text-sm transition-colors';
+                    btn.innerHTML = `<i class="fas fa-play"></i> ${r.label}`;
+                    streamBox.appendChild(btn);
+                });
+            }
+            
+            document.getElementById('result-section').classList.remove('hidden');
+            showStatus('success', 'File info loaded successfully!');
+        }
+
+        // ============================
+        // VIDEO PLAYER SETUP
+        // ============================
+        function setupPlayer(data) {
+            const video = document.getElementById('video-player');
+            const overlay = document.getElementById('video-overlay');
+            const qualityBadge = document.getElementById('current-quality');
+            const qualitySelector = document.getElementById('quality-selector');
+            
+            destroyPlayer();
+            
+            // Set poster
+            if (data.thumbnail) {
+                video.poster = data.thumbnail;
+            }
+            
+            // Build quality options
+            qualitySelector.innerHTML = '';
+            
+            const sources = [];
+            
+            // Add stream resolutions
+            if (data.resolutions && data.resolutions.length > 0) {
+                data.resolutions.forEach(r => {
+                    sources.push({ label: r.label, url: r.url, type: 'hls' });
+                });
+            }
+            
+            // Add direct stream
+            if (data.streamLink && !sources.find(s => s.url === data.streamLink)) {
+                sources.unshift({ label: 'Auto', url: data.streamLink, type: 'hls' });
+            }
+            
+            // Add download as fallback
+            if (data.downloadLink) {
+                sources.push({ label: 'Direct', url: data.downloadLink, type: 'direct' });
+            }
+            
+            if (sources.length === 0 && data.rawDlink) {
+                sources.push({ label: 'Raw', url: data.rawDlink, type: 'direct' });
+            }
+            
+            // Create quality buttons
+            sources.forEach((src, idx) => {
+                const btn = document.createElement('button');
+                btn.className = `px-3 py-1 text-xs font-medium rounded-lg transition-colors ${idx === 0 ? 'bg-purple-600 text-white' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`;
+                btn.textContent = src.label;
+                btn.onclick = () => switchQuality(src, btn);
+                qualitySelector.appendChild(btn);
+            });
+            
+            // Load first source
+            if (sources.length > 0) {
+                loadVideoSource(sources[0]);
+                qualityBadge.textContent = sources[0].label;
+            }
+            
+            overlay.classList.remove('hidden');
+        }
+
+        function loadVideoSource(source) {
+            const video = document.getElementById('video-player');
+            
+            destroyPlayer();
+            
+            if (source.type === 'hls' && source.url.includes('m3u8')) {
+                if (Hls.isSupported()) {
+                    hlsInstance = new Hls({
+                        maxBufferLength: 30,
+                        maxMaxBufferLength: 60
+                    });
+                    hlsInstance.loadSource(source.url);
+                    hlsInstance.attachMedia(video);
+                    hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+                        console.error('HLS Error:', data);
+                        if (data.fatal) {
+                            showToast('Playback error. Try another quality.', 'error');
+                        }
+                    });
+                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = source.url;
+                }
+            } else {
+                // Direct video URL - try with proxy for CORS
+                video.src = source.url;
+            }
+            
+            currentQuality = source.label;
+        }
+
+        function switchQuality(source, btn) {
+            // Update button styles
+            document.querySelectorAll('#quality-selector button').forEach(b => {
+                b.className = 'px-3 py-1 text-xs font-medium rounded-lg transition-colors bg-white/10 text-gray-300 hover:bg-white/20';
+            });
+            btn.className = 'px-3 py-1 text-xs font-medium rounded-lg transition-colors bg-purple-600 text-white';
+            
+            // Load new source
+            loadVideoSource(source);
+            document.getElementById('current-quality').textContent = source.label;
+            
+            // Auto play if was playing
+            const video = document.getElementById('video-player');
+            if (!video.paused) {
+                video.play().catch(() => {});
+            }
+        }
+
+        function playVideo() {
+            const video = document.getElementById('video-player');
+            const overlay = document.getElementById('video-overlay');
+            
+            video.play().then(() => {
+                overlay.classList.add('hidden');
+            }).catch(err => {
+                console.error('Play error:', err);
+                showToast('Unable to play video. Try downloading instead.', 'error');
+            });
+        }
+
+        function destroyPlayer() {
+            if (hlsInstance) {
+                hlsInstance.destroy();
+                hlsInstance = null;
+            }
+            const video = document.getElementById('video-player');
+            video.src = '';
+            video.load();
+        }
+
+        function toggleFullscreen() {
+            const container = document.getElementById('video-container');
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else {
+                container.requestFullscreen().catch(() => {});
+            }
+        }
+
+        function togglePiP() {
+            const video = document.getElementById('video-player');
+            if (document.pictureInPictureElement) {
+                document.exitPictureInPicture();
+            } else if (document.pictureInPictureEnabled) {
+                video.requestPictureInPicture().catch(() => {
+                    showToast('Picture-in-Picture not supported', 'error');
+                });
+            }
+        }
+
+        // ============================
+        // UTILITIES
+        // ============================
+        function showStatus(type, msg) {
+            const box = document.getElementById('status-box');
+            const styles = {
+                error: 'bg-red-500/20 border-red-500/30 text-red-300',
+                success: 'bg-green-500/20 border-green-500/30 text-green-300',
+                warning: 'bg-yellow-500/20 border-yellow-500/30 text-yellow-300'
+            };
+            const icons = {
+                error: 'fa-circle-xmark',
+                success: 'fa-circle-check',
+                warning: 'fa-triangle-exclamation'
+            };
+            
+            box.className = `rounded-xl p-4 border flex items-center gap-3 ${styles[type]}`;
+            box.innerHTML = `<i class="fas ${icons[type]}"></i><span>${msg}</span>`;
+            box.classList.remove('hidden');
+            
+            if (type === 'success') {
+                setTimeout(() => box.classList.add('hidden'), 3000);
+            }
+        }
+
+        function showToast(msg, type = 'success') {
+            const box = document.getElementById('toast-box');
+            const toast = document.createElement('div');
+            toast.className = `${type === 'success' ? 'bg-green-600' : 'bg-red-600'} text-white px-5 py-3 rounded-xl shadow-lg mb-2 transform transition-all duration-300 translate-x-full`;
+            toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check' : 'fa-times'} mr-2"></i>${msg}`;
+            box.appendChild(toast);
+            
+            setTimeout(() => toast.classList.remove('translate-x-full'), 10);
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => toast.remove(), 300);
+            }, 2500);
+        }
+
+        function copyLink() {
+            const link = document.getElementById('direct-link').value;
+            if (link && link !== 'N/A') {
+                navigator.clipboard.writeText(link).then(() => showToast('Link copied!'));
+            } else {
+                showToast('No link to copy', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
